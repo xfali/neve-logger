@@ -1,6 +1,6 @@
 # neve-logger
 
-neve-web是neve的日志扩展组件，用于配置日志。
+neve-logger是neve的日志扩展组件，用于配置日志。
 
 内置日志中间件为[xlog](https://github.com/xfali/xlog)
 
