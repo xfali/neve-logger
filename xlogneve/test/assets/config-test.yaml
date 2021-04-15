@@ -1,0 +1,7 @@
+neve:
+  logger:
+    level: warn
+    file:
+      - ./neve-example.log
+      - stdout
+    # - stderr
