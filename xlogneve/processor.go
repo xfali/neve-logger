@@ -50,8 +50,8 @@ func (p *processor) Init(conf fig.Properties, container bean.Container) error {
 	}
 
 	lvStr := conf.Get("neve.logger.level", "")
-	lv, ok := transLevel(lvStr)
-	if p.level == -1 && ok {
+	lv, _ := transLevel(lvStr)
+	if p.level == -1 {
 		p.level = lv
 	}
 	xlog.SetSeverityLevel(p.level)
