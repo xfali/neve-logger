@@ -17,12 +17,18 @@ func TestLogger(t *testing.T) {
 	app := neve.NewFileConfigApplication("assets/config-test.yaml")
 	//app.RegisterBean(xlogneve.NewLoggerProcessor(xlogneve.OptSetLogFormatter(&xlog.JsonFormatter{})))
 	app.RegisterBean(xlogneve.NewLoggerProcessor())
+
 	go app.Run()
 
 	time.Sleep(1 * time.Second)
 
 	xlog.Infoln("cannot output, display this means failed")
 	xlog.Warnln("this is ok")
+
+	logger := xlog.GetLogger(xlogneve.NewLoggerProcessor())
+	logger.Infoln("cannot output, display this means failed")
+	logger.Warnln("this is ok")
+	logger.Fatalln("this is ok")
 
 	time.Sleep(2 * time.Second)
 }

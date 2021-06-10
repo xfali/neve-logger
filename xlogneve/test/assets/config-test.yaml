@@ -1,7 +1,13 @@
 neve:
   logger:
-    level: warn
+    level: warn # [debug|info|warn|error|panic|fatal], default: info
     file:
       - ./neve-example.log
       - stdout
     # - stderr
+    caller:
+      file: short # [none|short|long], default: short
+      func: simple # [none|short|simple|long], default: none
+    simpleName: true
+    #noFatalTrace: true
+

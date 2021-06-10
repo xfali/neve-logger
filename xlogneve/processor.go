@@ -20,8 +20,21 @@ import (
 type processor struct {
 	writers []io.WriteCloser
 
-	creator FileWriterFactory
-	level   xlog.Level
+	formatter xlog.Formatter
+	creator   FileWriterFactory
+	level     xlog.Level
+}
+
+type logCaller struct {
+	File string `json:"file" yaml:"file" `
+	Func string `json:"func" yaml:"func" `
+}
+type logConf struct {
+	Level        string    `json:"level" yaml:"level" `
+	File         []string  `json:"file" yaml:"file" `
+	LogCaller    logCaller `json:"caller" yaml:"caller" `
+	SimpleName   bool      `json:"simpleName" yaml:"simpleName" `
+	NoFatalTrace bool      `json:"noFatalTrace" yaml:"noFatalTrace" `
 }
 
 type Opt func(*processor)
@@ -42,21 +55,30 @@ func NewLoggerProcessor(opts ...Opt) *processor {
 }
 
 func (p *processor) Init(conf fig.Properties, container bean.Container) error {
-	var outputs []string
-	err := conf.GetValue("neve.logger.file", &outputs)
+	var logConf logConf
+	err := conf.GetValue("neve.logger", &logConf)
 	if err != nil {
 		xlog.Errorln("Get logger config failed.")
 		return nil
 	}
 
-	lvStr := conf.Get("neve.logger.level", "")
+	lvStr := logConf.Level
 	lv, _ := transLevel(lvStr)
 	if p.level == -1 {
 		p.level = lv
 	}
-	xlog.SetSeverityLevel(p.level)
 
-	writers, err := p.parseWriter(outputs)
+	flag := parseCaller(logConf.LogCaller)
+	logging := xlog.NewLogging(xlog.SetCallerFlag(flag),
+		xlog.SetCallerFormatter(callerFormatter(logConf)),
+		xlog.SetFatalNoTrace(logConf.NoFatalTrace))
+	logging.SetSeverityLevel(p.level)
+
+	if p.formatter != nil {
+		logging.SetFormatter(p.formatter)
+	}
+
+	writers, err := p.parseWriter(logConf.File)
 	if err != nil {
 		// Init error, close all
 		p.closeAll()
@@ -64,9 +86,67 @@ func (p *processor) Init(conf fig.Properties, container bean.Container) error {
 		return err
 	}
 	if len(p.writers) > 0 {
-		xlog.SetOutput(io.MultiWriter(writers...))
+		logging.SetOutput(io.MultiWriter(writers...))
 	}
+
+	fac := xlog.NewFactory(logging)
+	if logConf.SimpleName {
+		fac.SimplifyNameFunc = xlog.SimplifyNameFirstLetter
+	}
+	xlog.ResetFactory(fac)
 	return nil
+}
+
+func callerFormatter(config logConf) func(file string, line int, funcName string) string {
+	return func(file string, line int, funcName string) string {
+		if funcName != "" && config.LogCaller.Func == "simple" {
+			funcName = simpleFuncName(funcName)
+		}
+		if file != "" {
+			if funcName == "" {
+				return fmt.Sprintf("%s:%d", file, line)
+			} else {
+				return fmt.Sprintf("%s:%d (%s)", file, line, funcName)
+			}
+		} else {
+			if funcName == "" {
+				return ""
+			} else {
+				return "(" + funcName + ")"
+			}
+		}
+	}
+}
+
+func simpleFuncName(funcName string) string {
+	segs := strings.Split(funcName, "/")
+	buf := strings.Builder{}
+	buf.Grow(len(funcName) / 2)
+	size := len(segs) - 1
+	for i := 0; i < size; i++ {
+		if len(segs[i]) > 0 {
+			buf.WriteString(segs[i][:1])
+			buf.WriteString(".")
+		}
+	}
+	buf.WriteString(segs[size])
+	return buf.String()
+}
+
+func parseCaller(caller logCaller) int {
+	flag := xlog.CallerShortFile
+	if caller.File == "none" {
+		flag = xlog.CallerNone
+	} else if caller.File == "long" {
+		flag = xlog.CallerLongFile
+	}
+
+	if caller.Func == "short" {
+		flag |= xlog.CallerShortFunc
+	} else if caller.Func == "long" || caller.Func == "simple" {
+		flag |= xlog.CallerLongFunc
+	}
+	return flag
 }
 
 func (p *processor) parseWriter(outputs []string) ([]io.Writer, error) {
@@ -182,8 +262,8 @@ func OptSetLogLevel(level xlog.Level) Opt {
 	}
 }
 
-func OptSetLogFormatter(f xlog.Formatter) Opt {
+func OptSetLogFormatter(formatter xlog.Formatter) Opt {
 	return func(p *processor) {
-		xlog.SetFormatter(f)
+		p.formatter = formatter
 	}
 }
