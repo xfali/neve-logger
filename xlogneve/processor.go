@@ -70,7 +70,6 @@ func (p *processor) Init(conf fig.Properties, container bean.Container) error {
 
 	flag := parseCaller(logConf.LogCaller)
 	logging := xlog.NewLogging(xlog.SetCallerFlag(flag),
-		xlog.SetCallerFormatter(callerFormatter(logConf)),
 		xlog.SetFatalNoTrace(logConf.NoFatalTrace))
 	logging.SetSeverityLevel(p.level)
 
@@ -97,42 +96,6 @@ func (p *processor) Init(conf fig.Properties, container bean.Container) error {
 	return nil
 }
 
-func callerFormatter(config logConf) func(file string, line int, funcName string) string {
-	return func(file string, line int, funcName string) string {
-		if funcName != "" && config.LogCaller.Func == "simple" {
-			funcName = simpleFuncName(funcName)
-		}
-		if file != "" {
-			if funcName == "" {
-				return fmt.Sprintf("%s:%d", file, line)
-			} else {
-				return fmt.Sprintf("%s:%d (%s)", file, line, funcName)
-			}
-		} else {
-			if funcName == "" {
-				return ""
-			} else {
-				return "(" + funcName + ")"
-			}
-		}
-	}
-}
-
-func simpleFuncName(funcName string) string {
-	segs := strings.Split(funcName, "/")
-	buf := strings.Builder{}
-	buf.Grow(len(funcName) / 2)
-	size := len(segs) - 1
-	for i := 0; i < size; i++ {
-		if len(segs[i]) > 0 {
-			buf.WriteString(segs[i][:1])
-			buf.WriteString(".")
-		}
-	}
-	buf.WriteString(segs[size])
-	return buf.String()
-}
-
 func parseCaller(caller logCaller) int {
 	flag := xlog.CallerShortFile
 	if caller.File == "none" {
@@ -143,8 +106,10 @@ func parseCaller(caller logCaller) int {
 
 	if caller.Func == "short" {
 		flag |= xlog.CallerShortFunc
-	} else if caller.Func == "long" || caller.Func == "simple" {
+	} else if caller.Func == "long" {
 		flag |= xlog.CallerLongFunc
+	} else if caller.Func == "simple" {
+		flag |= xlog.CallerSimpleFunc
 	}
 	return flag
 }
