@@ -11,7 +11,7 @@ import (
 	"github.com/xfali/neve-core/bean"
 	"github.com/xfali/stream"
 	"github.com/xfali/xlog"
-	"github.com/xfali/xlog/writer"
+	writer "github.com/xfali/xlog-writer"
 	"io"
 	"os"
 	"strings"
