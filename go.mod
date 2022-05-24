@@ -7,5 +7,5 @@ require (
 	github.com/xfali/neve-core v0.2.5
 	github.com/xfali/stream v0.0.5
 	github.com/xfali/xlog v0.1.6
-	github.com/xfali/xlog-writer v0.0.0-20220121165032-564aa13c3093 // indirect
+	github.com/xfali/xlog-writer v0.0.0-20220523004235-257fd5db92ea // indirect
 )
